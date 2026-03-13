@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ARIA"/>
+<title>ARIA — Personal Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#06080f;--card:#111827;--card2:#151d2e;
+  --border:rgba(99,202,255,0.11);--border2:rgba(99,202,255,0.26);
+  --accent:#38d9f5;--accent2:#7c6aff;--accent3:#ff6aad;--accent4:#4cdb8a;--accent5:#ffb347;
+  --text:#e8f0fe;--muted:#6b7a99;--muted2:#3a4458;
+  --glow:rgba(56,217,245,0.2);
+  --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
+  --r:14px;--r2:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--fh);overflow:hidden;position:fixed;width:100%;}
+.bg-fx{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.bg-fx::before{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(56,217,245,0.055) 0%,transparent 70%);top:-180px;left:-120px;animation:d1 20s ease-in-out infinite alternate;}
+.bg-fx::after{content:'';position:absolute;width:420px;height:420px;background:radial-gradient(circle,rgba(124,106,255,0.05) 0%,transparent 70%);bottom:-160px;right:-100px;animation:d2 24s ease-in-out infinite alternate;}
+@keyframes d1{from{transform:translate(0,0)}to{transform:translate(70px,55px)}}
+@keyframes d2{from{transform:translate(0,0)}to{transform:translate(-55px,-65px)}}
+
+/* ── APP SHELL ── */
+.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;padding:env(safe-area-inset-top,0) 0 0;}
+
+/* ── HEADER ── */
+.header{flex-shrink:0;padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.logo{font-size:21px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-sub{display:block;font-size:10px;letter-spacing:3px;-webkit-text-fill-color:var(--muted);margin-top:-1px;font-weight:400;}
+.hdr-right{display:flex;align-items:center;gap:8px;}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--glow);animation:pd 2.5s ease-in-out infinite;}
+@keyframes pd{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+
+/* ── API BANNER ── */
+.api-banner{margin:8px 14px;background:rgba(124,106,255,0.09);border:1px solid rgba(124,106,255,0.22);border-radius:var(--r);padding:11px 13px;display:flex;flex-direction:column;gap:7px;flex-shrink:0;}
+.api-banner p{font-size:11px;color:var(--muted);font-family:var(--fm);line-height:1.5;}
+.api-banner strong{color:var(--accent2);}
+.api-row{display:flex;gap:7px;}
+.api-input{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-family:var(--fm);font-size:12px;outline:none;transition:border-color .2s;}
+.api-input:focus{border-color:var(--accent2);}
+.api-input::placeholder{color:var(--muted);}
+.btn-save{background:var(--accent2);color:#fff;border:none;border-radius:8px;padding:8px 13px;font-family:var(--fh);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-save:active{opacity:.8;}
+
+/* ── SUB-TOGGLE (Booking guest/host) ── */
+.sub-toggle{flex-shrink:0;display:flex;margin:7px 14px 0;background:var(--card);border:1px solid var(--border);border-radius:26px;padding:3px;gap:3px;}
+.sub-btn{flex:1;padding:7px 8px;border-radius:22px;border:none;background:transparent;color:var(--muted);font-family:var(--fh);font-size:11px;font-weight:700;cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:4px;}
+.sub-btn.on{color:#fff;box-shadow:0 2px 10px var(--glow);}
+
+/* ── CHIPS ── */
+.chips-row{display:flex;gap:7px;overflow-x:auto;padding:8px 14px 6px;-webkit-overflow-scrolling:touch;flex-shrink:0;}
+.chips-row::-webkit-scrollbar{display:none;}
+.chip{white-space:nowrap;padding:6px 12px;border-radius:30px;border:1px solid var(--border);background:rgba(56,217,245,0.035);color:var(--muted);font-size:11px;cursor:pointer;transition:all .18s;flex-shrink:0;}
+.chip:active{border-color:var(--accent);color:var(--accent);background:rgba(56,217,245,0.07);}
+
+/* ── MESSAGES ── */
+.messages{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:11px;-webkit-overflow-scrolling:touch;}
+.messages::-webkit-scrollbar{display:none;}
+.msg{display:flex;flex-direction:column;gap:3px;animation:mi .28s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes mi{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.msg.user{align-items:flex-end;}
+.msg.assistant{align-items:flex-start;}
+.bubble{max-width:86%;padding:11px 15px;border-radius:18px;line-height:1.6;font-size:14px;}
+.msg.user .bubble{background:linear-gradient(135deg,var(--accent2),#5244c8);color:#fff;border-bottom-right-radius:4px;box-shadow:0 4px 16px rgba(124,106,255,0.26);}
+.msg.assistant .bubble{background:var(--card);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,0.28);}
+.msg-time{font-size:10px;color:var(--muted);font-family:var(--fm);padding:0 3px;}
+
+/* Mode label inside bubble */
+.mlabel{display:inline-block;font-size:10px;padding:2px 8px;border-radius:8px;margin-bottom:5px;font-family:var(--fm);font-weight:600;letter-spacing:.5px;}
+.mlabel.booking-g{background:rgba(56,217,245,0.13);color:var(--accent);}
+.mlabel.booking-h{background:rgba(76,219,138,0.13);color:var(--accent4);}
+.mlabel.tickets{background:rgba(255,179,71,0.13);color:var(--accent5);}
+.mlabel.email{background:rgba(255,106,173,0.13);color:var(--accent3);}
+.mlabel.assist{background:rgba(124,106,255,0.13);color:var(--accent2);}
+
+/* ── TYPING ── */
+.typing-indicator{display:flex;align-items:center;gap:5px;padding:12px 15px;background:var(--card);border:1px solid var(--border);border-radius:18px;border-bottom-left-radius:4px;width:fit-content;}
+.td{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bn 1.2s ease-in-out infinite;}
+.td:nth-child(2){animation-delay:.2s;background:var(--accent2);}
+.td:nth-child(3){animation-delay:.4s;background:var(--accent3);}
+@keyframes bn{0%,80%,100%{transform:translateY(0);opacity:.45}40%{transform:translateY(-6px);opacity:1}}
+
+/* ── QUICK ACTION GRID ── */
+.qa-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;}
+.qa{background:var(--card2);border:1px solid var(--border);border-radius:var(--r2);padding:11px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:5px;}
+.qa:active{border-color:var(--accent);transform:scale(.97);}
+.qa-icon{font-size:19px;}
+.qa-title{font-size:12px;font-weight:700;color:var(--text);}
+.qa-desc{font-size:10px;color:var(--muted);font-family:var(--fm);}
+
+/* ── INPUT AREA ── */
+.input-area{padding:8px 14px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--border);display:flex;gap:7px;align-items:flex-end;flex-shrink:0;}
+.text-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:11px 15px;color:var(--text);font-family:var(--fh);font-size:14px;outline:none;resize:none;line-height:1.4;max-height:100px;min-height:44px;transition:border-color .2s;-webkit-appearance:none;}
+.text-input:focus{border-color:var(--accent);}
+.text-input::placeholder{color:var(--muted);}
+.btn-send{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .14s;-webkit-appearance:none;}
+.btn-send:active{transform:scale(.9);}
+.btn-mic{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,var(--accent),#2ab5d4);box-shadow:0 3px 12px rgba(56,217,245,0.28);transition:transform .14s;-webkit-appearance:none;}
+.btn-mic:active{transform:scale(.9);}
+.btn-mic.listening{background:linear-gradient(135deg,var(--accent3),#c0307a);animation:mpulse 1.1s ease-in-out infinite;}
+@keyframes mpulse{0%,100%{box-shadow:0 3px 14px rgba(255,106,173,0.4),0 0 0 0 rgba(255,106,173,0.25)}50%{box-shadow:0 3px 14px rgba(255,106,173,0.4),0 0 0 9px rgba(255,106,173,0)}}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{flex-shrink:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 2px 8px;cursor:pointer;position:relative;transition:all .2s;}
+.nav-item.active .nav-ic{filter:drop-shadow(0 0 4px currentColor);}
+.nav-item::after{content:'';position:absolute;top:0;left:25%;right:25%;height:1.5px;border-radius:0 0 3px 3px;opacity:0;transition:opacity .2s;}
+.nav-item.active::after{opacity:1;}
+.nav-ic{font-size:19px;transition:transform .2s;}
+.nav-item.active .nav-ic{transform:scale(1.12);}
+.nav-lbl{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);transition:color .2s;}
+.nav-item.active .nav-lbl{font-weight:700;}
+
+/* Tab accent colors */
+.nav-item[data-tab="booking"].active .nav-lbl{color:var(--accent);}
+.nav-item[data-tab="booking"].active::after{background:var(--accent);}
+.nav-item[data-tab="tickets"].active .nav-lbl{color:var(--accent5);}
+.nav-item[data-tab="tickets"].active::after{background:var(--accent5);}
+.nav-item[data-tab="email"].active .nav-lbl{color:var(--accent3);}
+.nav-item[data-tab="email"].active::after{background:var(--accent3);}
+.nav-item[data-tab="assist"].active .nav-lbl{color:var(--accent2);}
+.nav-item[data-tab="assist"].active::after{background:var(--accent2);}
+
+/* ── VOICE OVERLAY ── */
+.voice-overlay{display:none;position:fixed;inset:0;z-index:50;background:rgba(6,8,15,0.93);align-items:center;justify-content:center;flex-direction:column;gap:22px;}
+.voice-overlay.active{display:flex;}
+.wave-lbl{font-size:13px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;font-family:var(--fm);text-align:center;padding:0 28px;max-width:300px;}
+.wave-rings{position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;}
+.ring{position:absolute;border-radius:50%;border:1.5px solid var(--accent3);animation:rx 1.8s ease-out infinite;opacity:0;}
+.ring:nth-child(1){width:52px;height:52px;animation-delay:0s;}
+.ring:nth-child(2){width:78px;height:78px;animation-delay:.4s;}
+.ring:nth-child(3){width:102px;height:102px;animation-delay:.8s;}
+.ring:nth-child(4){width:120px;height:120px;animation-delay:1.2s;}
+@keyframes rx{0%{opacity:.85;transform:scale(.7)}100%{opacity:0;transform:scale(1.08)}}
+.mic-ctr{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent3),#c0307a);display:flex;align-items:center;justify-content:center;box-shadow:0 0 24px rgba(255,106,173,0.5);z-index:1;}
+.cancel-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:8px 24px;border-radius:30px;cursor:pointer;font-family:var(--fh);font-size:12px;}
+.cancel-btn:active{border-color:var(--accent3);color:var(--accent3);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--card);border:1px solid var(--border);border-radius:30px;padding:8px 16px;font-size:12px;color:var(--muted);font-family:var(--fm);opacity:0;transition:all .28s;z-index:100;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="bg-fx"></div>
+
+<!-- Voice overlay -->
+<div class="voice-overlay" id="voiceOverlay">
+  <div class="wave-lbl" id="waveLbl">Listening…</div>
+  <div class="wave-rings">
+    <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
+    <div class="mic-ctr"><svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm5 11a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21H9v2h6v-2h-2v-2.07A7 7 0 0 0 19 12h-2z"/></svg></div>
+  </div>
+  <button class="cancel-btn" onclick="cancelListening()">Cancel</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">ARIA<span class="logo-sub">Personal Assistant</span></div>
+    <div class="hdr-right"><div class="sdot"></div></div>
+  </div>
+
+  <!-- API Banner -->
+  <div class="api-banner" id="apiBanner">
+    <p><strong>One-time setup:</strong> Enter your Anthropic API key to power ARIA. Free at <strong>console.anthropic.com</strong></p>
+    <div class="api-row">
+      <input class="api-input" id="apiKeyInput" type="password" placeholder="sk-ant-…"/>
+      <button class="btn-save" onclick="saveKey()">Save</button>
+    </div>
+  </div>
+
+  <!-- Booking sub-toggle (only visible on booking tab) -->
+  <div class="sub-toggle" id="subToggle">
+    <button class="sub-btn on" id="guestBtn" onclick="setSubMode('guest')">🧳 Guest</button>
+    <button class="sub-btn" id="hostBtn" onclick="setSubMode('host')">🏠 Host</button>
+  </div>
+
+  <!-- Chips -->
+  <div class="chips-row" id="chipsRow"></div>
+
+  <!-- Messages -->
+  <div class="messages" id="messages"></div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <textarea class="text-input" id="textInput" placeholder="Type or speak…" rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+    <button class="btn-send" onclick="sendMessage()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+    <button class="btn-mic" id="micBtn" onclick="toggleVoice()">
+      <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm5 11a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21H9v2h6v-2h-2v-2.07A7 7 0 0 0 19 12h-2z"/></svg>
+    </button>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="nav-item active" data-tab="booking" onclick="switchTab('booking')">
+      <div class="nav-ic">🏨</div><div class="nav-lbl">Booking</div>
+    </div>
+    <div class="nav-item" data-tab="tickets" onclick="switchTab('tickets')">
+      <div class="nav-ic">🎟️</div><div class="nav-lbl">Tickets</div>
+    </div>
+    <div class="nav-item" data-tab="email" onclick="switchTab('email')">
+      <div class="nav-ic">✉️</div><div class="nav-lbl">Email</div>
+    </div>
+    <div class="nav-item" data-tab="assist" onclick="switchTab('assist')">
+      <div class="nav-ic">🤖</div><div class="nav-lbl">Assistant</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let apiKey = localStorage.getItem('aria_key') || '';
+let tab = 'booking';      // booking | tickets | email | assist
+let subMode = 'guest';    // guest | host  (only for booking tab)
+let recognition = null, isListening = false;
+// Per-tab conversation history
+const history = { booking_guest:[], booking_host:[], tickets:[], email:[], assist:[] };
+
+// ── SYSTEM PROMPTS ─────────────────────────────────────────────
+const SYSTEM = {
+  booking_guest:`You are ARIA, a Booking.com expert for travellers (guest account).
+Help with: finding hotels/apartments/villas (ask dates, destination, budget, guests if missing), managing/cancelling/modifying bookings, drafting messages to hosts, responding to host messages, writing guest reviews, understanding policies (free cancellation, Genius, payment), check-in/out requests, disputes & customer service escalations.
+Format copy-paste-ready messages clearly. Use **bold** for key info. Keep responses concise for mobile.`,
+
+  booking_host:`You are ARIA, a Booking.com expert for property hosts.
+Help with: drafting responses to guest inquiries/requests/complaints, responding to reviews (positive & negative) professionally, writing check-in instructions & welcome messages, house rules, managing reservations & cancellations, handling no-shows & damage claims, listing optimisation (title, description, amenities, photos), pricing strategy (seasonal, Genius, last-minute), improving ranking, Extranet navigation.
+Be warm and professional. Keep responses concise for mobile.`,
+
+  tickets:`You are ARIA, an expert tickets assistant.
+Help with:
+- ✈️ Flights: search tips, best booking sites (Skyscanner, Google Flights, Kayak), baggage policies, seat selection, check-in, delays & cancellations, refund claims, rebooking
+- 🚂 Trains: Eurail, Trenitalia, DB, SNCF, Renfe, Eurostar, booking tips, passes vs individual tickets
+- 🎭 Events: concerts, theatre, sports, festivals — finding tickets, Ticketmaster, Viagogo warnings, resale tips, sold-out alternatives
+- 🚌 Buses: FlixBus, BlaBlaBus, regional operators
+- ⛴️ Ferries & cruises
+- 🎬 Cinema & entertainment tickets
+- Drafting complaint letters to airlines/train operators for delays, cancellations, lost luggage, EU261 compensation claims
+When the user wants to book: give them the best direct link/platform and what to look for. Draft complaint letters when needed — ready to copy-paste.
+Use **bold** for key info. Keep responses concise for mobile.`,
+
+  email:`You are ARIA, an expert email drafting assistant.
+Help with writing any type of professional or personal email:
+- 💼 Work: proposals, follow-ups, meeting requests, status updates, resignation, performance conversations
+- 🤝 Business: cold outreach, partnership proposals, client communication, invoices, complaints
+- 🏠 Personal: landlord/tenant issues, complaints to companies, cancellations, refund requests
+- 🩺 Official: letters to authorities, banks, insurance, government, lawyers
+- 😬 Difficult emails: apologies, saying no, delivering bad news, confrontational situations
+- 📧 Email management: suggest subject lines, tones, lengths
+
+Always ask: Who is the recipient? What's the goal? What's the relationship? Then draft immediately.
+Provide the email ready to copy-paste with subject line. Offer 2 tones if the situation is sensitive (firm vs polite).
+Use **bold** for key info. Keep responses concise for mobile.`,
+
+  assist:`You are ARIA, a brilliant all-purpose personal assistant — like having a smart, knowledgeable friend available 24/7.
+Help with absolutely anything:
+- 📅 Planning & scheduling: daily plans, routines, calendars, reminders text
+- 🔍 Research & summaries: any topic, news, comparisons, fact-checking
+- 🛒 Shopping advice: what to buy, where to buy, price comparisons, product recommendations
+- 🍽️ Food & restaurants: recipe ideas, restaurant recommendations, nutrition
+- 💪 Health & fitness: workout plans, wellness tips, motivation
+- 💰 Finance basics: budgeting, savings tips, understanding bills
+- 📚 Learning: explain anything simply, study plans, translations
+- ✍️ Writing: social media posts, bios, speeches, creative content
+- 🗣️ Conversations & advice: personal situations, decision-making, ideas
+- 🔧 Problem solving: technical help, troubleshooting, how-to guidance
+
+Be warm, direct, practical, and genuinely helpful. No unnecessary caveats. Give real answers.
+Use **bold** for key info. Keep responses concise for mobile.`
+};
+
+// ── TAB CONFIG ─────────────────────────────────────────────────
+const TABS = {
+  booking: {
+    label: '🏨 Booking.com',
+    labelTag: { guest:'booking-g', host:'booking-h' },
+    labelText: { guest:'BOOKING · GUEST', host:'BOOKING · HOST' },
+    chips: {
+      guest:['Find hotel in Rome 🇮🇹','Cancel my booking','Message my host','Late check-in request','Write a review','Dispute a charge'],
+      host:['Welcome guest message','Reply to bad review','Handle no-show','Checkout reminder','Boost my listing','Pricing tips']
+    },
+    intro: {
+      guest:`👋 Hi! I'm <strong>ARIA</strong> — your Booking.com <span class="mlabel booking-g">GUEST</span> assistant.<br><br>I handle your stays end-to-end — search, manage, cancel, message hosts, write reviews, and fight for refunds.<br><br><div class="qa-grid"><div class="qa" onclick="sendSug('Find me a hotel in Paris for 2 adults, 3 nights next month, budget €120/night')"><div class="qa-icon">🔍</div><div class="qa-title">Find a Stay</div><div class="qa-desc">Hotels, apts, villas</div></div><div class="qa" onclick="sendSug('Help me cancel my upcoming booking and check if I qualify for a refund')"><div class="qa-icon">❌</div><div class="qa-title">Cancel Booking</div><div class="qa-desc">Free cancellation help</div></div><div class="qa" onclick="sendSug('Draft a message to my host asking if I can check in late at 11pm')"><div class="qa-icon">✉️</div><div class="qa-title">Message Host</div><div class="qa-desc">Any request</div></div><div class="qa" onclick="sendSug('Help me write a fair honest review for my recent stay')"><div class="qa-icon">⭐</div><div class="qa-title">Write Review</div><div class="qa-desc">Balanced & helpful</div></div></div>`,
+      host:`👋 Hi! I'm <strong>ARIA</strong> — your Booking.com <span class="mlabel booking-h">HOST</span> assistant.<br><br>I help you manage your property, guests, reviews, and reservations professionally.<br><br><div class="qa-grid"><div class="qa" onclick="sendSug('Write a warm welcome message with check-in instructions for a guest arriving tomorrow at 3pm')"><div class="qa-icon">🏠</div><div class="qa-title">Welcome Guest</div><div class="qa-desc">Check-in messages</div></div><div class="qa" onclick="sendSug('A guest left a 6/10 review saying the room was noisy. Help me write a professional response.')"><div class="qa-icon">⭐</div><div class="qa-title">Reply to Review</div><div class="qa-desc">Turn negatives around</div></div><div class="qa" onclick="sendSug('A guest is asking for late checkout at 2pm. Draft a polite but firm response.')"><div class="qa-icon">✉️</div><div class="qa-title">Reply to Guest</div><div class="qa-desc">Any inquiry</div></div><div class="qa" onclick="sendSug('Give me actionable tips to improve my Booking.com ranking and get more bookings')"><div class="qa-icon">📈</div><div class="qa-title">Boost Bookings</div><div class="qa-desc">Ranking & visibility</div></div></div>`
+    }
+  },
+  tickets: {
+    label: '🎟️ Tickets',
+    labelTag: 'tickets',
+    labelText: 'TICKETS',
+    chips:['Find cheap flights ✈️','Book Eurostar train','Concert ticket help','Claim flight delay refund','Ferries & cruises','Lost luggage complaint'],
+    intro:`👋 Hi! I'm <strong>ARIA</strong> — your <span class="mlabel tickets">TICKETS</span> assistant.<br><br>Flights, trains, events, buses, ferries — I help you find, book, and when things go wrong, I draft your complaint letters.<br><br><div class="qa-grid"><div class="qa" onclick="sendSug('Find the cheapest flight from Athens to London next weekend, flexible on time')"><div class="qa-icon">✈️</div><div class="qa-title">Cheap Flights</div><div class="qa-desc">Best sites & tips</div></div><div class="qa" onclick="sendSug('My flight was delayed 3 hours. How do I claim EU261 compensation? Draft the letter.')"><div class="qa-icon">📋</div><div class="qa-title">Claim Compensation</div><div class="qa-desc">EU261, refunds, delays</div></div><div class="qa" onclick="sendSug('Find me tickets to a Taylor Swift or big concert in Europe this summer')"><div class="qa-icon">🎭</div><div class="qa-title">Event Tickets</div><div class="qa-desc">Concerts, sports, theatre</div></div><div class="qa" onclick="sendSug('Best way to book train travel from Paris to Barcelona — Eurostar or other options?')"><div class="qa-icon">🚂</div><div class="qa-title">Train Tickets</div><div class="qa-desc">Europe rail & passes</div></div></div>`
+  },
+  email: {
+    label: '✉️ Email',
+    labelTag: 'email',
+    labelText: 'EMAIL',
+    chips:['Write a work email','Cold outreach message','Complaint to company','Request a refund','Resignation letter','Difficult apology email'],
+    intro:`👋 Hi! I'm <strong>ARIA</strong> — your <span class="mlabel email">EMAIL</span> assistant.<br><br>Tell me what you need to say and who you're saying it to — I'll write it for you, ready to copy-paste.<br><br><div class="qa-grid"><div class="qa" onclick="sendSug('Write a professional email to my boss requesting a salary review meeting')"><div class="qa-icon">💼</div><div class="qa-title">Work Email</div><div class="qa-desc">Professional & clear</div></div><div class="qa" onclick="sendSug('Write a firm complaint email to a company that charged me incorrectly and wont respond')"><div class="qa-icon">⚡</div><div class="qa-title">Complaint Letter</div><div class="qa-desc">Get results fast</div></div><div class="qa" onclick="sendSug('Write a cold outreach email to a potential business partner I met briefly at a conference')"><div class="qa-icon">🤝</div><div class="qa-title">Cold Outreach</div><div class="qa-desc">Business & networking</div></div><div class="qa" onclick="sendSug('Help me write a difficult email to a friend I need to apologise to sincerely')"><div class="qa-icon">💙</div><div class="qa-title">Personal Email</div><div class="qa-desc">Any personal situation</div></div></div>`
+  },
+  assist: {
+    label: '🤖 Assistant',
+    labelTag: 'assist',
+    labelText: 'ASSISTANT',
+    chips:['Plan my week 📅','Recommend a restaurant','Budget tips 💰','Translate a sentence','Write my bio','Explain anything simply'],
+    intro:`👋 Hi! I'm <strong>ARIA</strong> — your <span class="mlabel assist">ASSISTANT</span>.<br><br>Ask me literally anything — planning, research, advice, writing, shopping, health, finance, translations, decisions. I'm your smart friend on call 24/7.<br><br><div class="qa-grid"><div class="qa" onclick="sendSug('Help me plan my week — I have work Mon-Fri, gym 3x, and I need to meal prep Sunday')"><div class="qa-icon">📅</div><div class="qa-title">Plan My Week</div><div class="qa-desc">Schedule & routines</div></div><div class="qa" onclick="sendSug('Give me 5 practical money saving tips I can start today')"><div class="qa-icon">💰</div><div class="qa-title">Money Tips</div><div class="qa-desc">Budget & savings</div></div><div class="qa" onclick="sendSug('Write a short compelling bio for my LinkedIn profile — I work in marketing')"><div class="qa-icon">✍️</div><div class="qa-title">Write Anything</div><div class="qa-desc">Posts, bios, speeches</div></div><div class="qa" onclick="sendSug('I need to make a decision and I am stuck. Can you help me think through it?')"><div class="qa-icon">🧠</div><div class="qa-title">Think With Me</div><div class="qa-desc">Decisions & advice</div></div></div>`
+  }
+};
+
+// ── INIT ───────────────────────────────────────────────────────
+function init() {
+  if (apiKey) document.getElementById('apiBanner').style.display = 'none';
+  renderAll();
+}
+
+function renderAll() {
+  renderSubToggle();
+  renderChips();
+  renderIntro();
+}
+
+function renderSubToggle() {
+  const st = document.getElementById('subToggle');
+  st.style.display = tab === 'booking' ? 'flex' : 'none';
+  if (tab === 'booking') {
+    const gBtn = document.getElementById('guestBtn');
+    const hBtn = document.getElementById('hostBtn');
+    const isGuest = subMode === 'guest';
+    gBtn.className = 'sub-btn' + (isGuest ? ' on' : '');
+    gBtn.style.background = isGuest ? 'linear-gradient(135deg,var(--accent),#1fa8c4)' : '';
+    gBtn.style.color = isGuest ? '#fff' : '';
+    hBtn.className = 'sub-btn' + (!isGuest ? ' on' : '');
+    hBtn.style.background = !isGuest ? 'linear-gradient(135deg,var(--accent4),#2aaa66)' : '';
+    hBtn.style.color = !isGuest ? '#fff' : '';
+  }
+}
+
+function renderChips() {
+  const t = TABS[tab];
+  let chips = tab === 'booking' ? t.chips[subMode] : t.chips;
+  document.getElementById('chipsRow').innerHTML = chips.map(c =>
+    `<div class="chip" onclick="sendSug('${c.replace(/['"]/g,' ')}')">${c}</div>`
+  ).join('');
+}
+
+function renderIntro() {
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = '';
+  const t = TABS[tab];
+  const html = tab === 'booking' ? t.intro[subMode] : t.intro;
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.innerHTML = `<div class="bubble">${html}</div><div class="msg-time">${getTime()}</div>`;
+  msgs.appendChild(div);
+}
+
+function histKey() {
+  return tab === 'booking' ? `booking_${subMode}` : tab;
+}
+
+function switchTab(t) {
+  tab = t;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === t));
+  renderAll();
+}
+
+function setSubMode(m) {
+  subMode = m;
+  renderAll();
+}
+
+// ── MESSAGING ─────────────────────────────────────────────────
+function saveKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-')) { showToast('⚠️ Invalid key format'); return; }
+  apiKey = val;
+  localStorage.setItem('aria_key', val);
+  document.getElementById('apiBanner').style.display = 'none';
+  showToast('✅ API key saved!');
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function sendSug(text) {
+  document.getElementById('textInput').value = text;
+  sendMessage();
+}
+
+function getTime() {
+  return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+
+function getModeLabel() {
+  const t = TABS[tab];
+  if (tab === 'booking') {
+    return `<span class="mlabel ${t.labelTag[subMode]}">${t.labelText[subMode]}</span><br>`;
+  }
+  return `<span class="mlabel ${t.labelTag}">${t.labelText}</span><br>`;
+}
+
+function addMessage(role, content) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const fmt = content.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  const prefix = role === 'assistant' ? getModeLabel() : '';
+  div.innerHTML = `<div class="bubble">${prefix}${fmt}</div><div class="msg-time">${getTime()}</div>`;
+  msgs.appendChild(div);
+  setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg assistant'; div.id = 'typing';
+  div.innerHTML = `<div class="typing-indicator"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  msgs.appendChild(div);
+  setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!apiKey) { showToast('⚠️ Please set your API key first'); return; }
+
+  input.value = ''; input.style.height = 'auto';
+  addMessage('user', text);
+  const key = histKey();
+  history[key].push({ role:'user', content:text });
+  showTyping();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1024,
+        system:SYSTEM[key],
+        messages:history[key]
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+
+    if (data.content && data.content[0]) {
+      const reply = data.content[0].text;
+      history[key].push({ role:'assistant', content:reply });
+      addMessage('assistant', reply);
+      speakReply(reply);
+    } else if (data.error) {
+      addMessage('assistant', `⚠️ ${data.error.message}`);
+    }
+  } catch(err) {
+    removeTyping();
+    addMessage('assistant','⚠️ Connection error. Check your API key.');
+  }
+}
+
+// ── VOICE ──────────────────────────────────────────────────────
+function toggleVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('🎤 Use Safari on iOS for voice'); return;
+  }
+  isListening ? cancelListening() : startListening();
+}
+
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'en-US'; recognition.interimResults = true;
+  document.getElementById('voiceOverlay').classList.add('active');
+  document.getElementById('micBtn').classList.add('listening');
+  isListening = true;
+
+  recognition.onresult = (e) => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('waveLbl').textContent = t || 'Listening…';
+    if (e.results[e.results.length - 1].isFinal) {
+      document.getElementById('textInput').value = t;
+      cancelListening();
+      setTimeout(sendMessage, 200);
+    }
+  };
+  recognition.onerror = (e) => { cancelListening(); if (e.error!=='aborted') showToast('🎤 '+e.error); };
+  recognition.onend = () => { if (isListening) cancelListening(); };
+  recognition.start();
+}
+
+function cancelListening() {
+  isListening = false;
+  document.getElementById('voiceOverlay').classList.remove('active');
+  document.getElementById('micBtn').classList.remove('listening');
+  document.getElementById('waveLbl').textContent = 'Listening…';
+  if (recognition) { try{recognition.stop();}catch(e){} recognition = null; }
+}
+
+function speakReply(text) {
+  if (!window.speechSynthesis) return;
+  const clean = text.replace(/\*\*(.*?)\*\*/g,'$1').replace(/<[^>]+>/g,'').substring(0,260);
+  const u = new SpeechSynthesisUtterance(clean);
+  u.rate = 1.05; u.pitch = 1.05;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>
